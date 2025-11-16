@@ -1,1 +1,107 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Log In • Inventory Manage System</title><link rel="stylesheet" href="assets/css/style.css"><style>header{display:none}.auth{max-width:520px;margin:32px auto}.auth .card{padding:24px}.auth h2{margin:0 0 12px 0}.actions{display:flex;gap:10px;align-items:center}.link{color:#9ec1ff;text-decoration:none}</style></head><body><header><h1>INVENTORY MANAGE SYSTEM</h1><nav class="nav"><a class="navlink" href="index.html">Home</a><a class="navlink active" href="login.html">Log In</a><a class="navlink" href="signup.html">Sign Up</a><a class="navlink" href="products.html">Products</a><a class="navlink" href="sales.html">Sales</a><a class="navlink" href="stock.html">Stock</a></nav></header><div class="container auth"><div class="card"><h2>Log In</h2><form id="login-form"><div class="row"><input name="email" type="email" placeholder="Email" required><input name="password" type="password" placeholder="Password" required></div><div class="row actions"><button class="primary" type="submit">Log In</button><a class="link" href="signup.html">Create an account</a></div></form></div></div><script>document.getElementById('login-form').addEventListener('submit',function(e){e.preventDefault();const fd=new FormData(e.target);const email=String(fd.get('email')||'').trim().toLowerCase();const password=String(fd.get('password')||'');let users=[];try{users=JSON.parse(localStorage.getItem('ims_users')||'[]')||[]}catch(err){}const user=users.find(function(u){return String(u.email||'').toLowerCase()===email&&u.password===password;});if(!user){alert('Incorrect email or password');return;}try{sessionStorage.setItem('ims_current_user',JSON.stringify({email:user.email,name:user.name,role:user.role,ownerEmail: (String(user.role)==='user' ? (user.ownerEmail||'') : '')}));}catch(_e){}location.href=(String(user.role)==='admin'?'dashboard.html':'user-dashboard.html');});</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log In • Inventory Manage System</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <style>
+    header {
+      display: none;
+    }
+    .auth {
+      max-width: 520px;
+      margin: 32px auto;
+    }
+    .auth .card {
+      padding: 24px;
+    }
+    .auth h2 {
+      margin: 0 0 12px 0;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .link {
+      color: #9ec1ff;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>INVENTORY MANAGE SYSTEM</h1>
+    <nav class="nav">
+      <a class="navlink" href="index.html">Home</a>
+      <a class="navlink active" href="login.html">Log In</a>
+      <a class="navlink" href="signup.html">Sign Up</a>
+      <a class="navlink" href="products.html">Products</a>
+      <a class="navlink" href="sales.html">Sales</a>
+      <a class="navlink" href="stock.html">Stock</a>
+    </nav>
+  </header>
+
+  <div class="container auth">
+    <div class="card">
+      <h2>Log In</h2>
+
+      <form id="login-form">
+        <div class="row">
+          <input name="email" type="email" placeholder="Email" required>
+          <input name="password" type="password" placeholder="Password" required>
+        </div>
+
+        <div class="row actions">
+          <button class="primary" type="submit">Log In</button>
+          <a class="link" href="signup.html">Create an account</a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const fd = new FormData(e.target);
+      const email = String(fd.get('email') || '').trim().toLowerCase();
+      const password = String(fd.get('password') || '');
+
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('ims_users') || '[]') || [];
+      } catch (err) {}
+
+      const user = users.find(function (u) {
+        return String(u.email || '').toLowerCase() === email && u.password === password;
+      });
+
+      if (!user) {
+        alert('Incorrect email or password');
+        return;
+      }
+
+      try {
+        sessionStorage.setItem(
+          'ims_current_user',
+          JSON.stringify({
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            ownerEmail: (String(user.role) === 'user' ? (user.ownerEmail || '') : '')
+          })
+        );
+      } catch (_e) {}
+
+      location.href = (String(user.role) === 'admin' ? 'dashboard.html' : 'user-dashboard.html');
+    });
+  </script>
+
+</body>
+</html>
