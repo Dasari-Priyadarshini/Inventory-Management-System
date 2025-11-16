@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>My Orders • Inventory MS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      body{background:#0b1022}
+      header{display:none}
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0f1630;border-right:1px solid #1d2a52;padding:20px;position:sticky;top:0;height:100vh}
+      .brand{color:#c8d7ff;font-weight:800;letter-spacing:.4px;margin-bottom:16px}
+      .menu{display:flex;flex-direction:column;gap:8px}
+      .menu a{color:#a9b8e8;text-decoration:none;padding:10px 12px;border-radius:8px}
+      .menu a.active,.menu a:hover{background:#172349;color:#e7f1ff}
+      .content{padding:20px}
+      .page-title{font-size:28px;margin:0 0 14px;color:#e7f1ff}
+      .card.white{background:#111a35;border-radius:12px;border:1px solid #1d2a52;padding:16px;box-shadow:0 8px 18px rgba(0,0,0,.2);color:#dbe8ff}
+      th, td{padding:10px}
+      @media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}}
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">Inventory MS</div>
+        <nav class="menu">
+          <a href="user-dashboard.html">Products</a>
+          <a class="active" href="user-orders.html">Orders</a>
+          <a href="profile.html">Profile</a>
+          <a class="logout" href="index.html">Logout</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <h1 class="page-title">My Orders</h1>
+        <div class="card white">
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr><th style="width:80px">S NO</th><th>Product Name</th><th>Category</th><th>Quantity</th><th>Total Price</th><th>Order Date</th><th style="width:120px">Action</th></tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      (function(){
+        let current=null; try{ current = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ current=null }
+        if(!current){ location.href='login.html'; return; }
+        if(String(current.role)!=='user'){ location.href='dashboard.html'; return; }
+        const key = `ims_orders__${String(current.email||'').toLowerCase()}`;
+        let orders=[]; try{ orders = JSON.parse(localStorage.getItem(key)||'[]')||[] }catch(e){ orders=[] }
+        const rows=document.getElementById('rows');
+        const fmt = (n)=>`$${Number(n||0).toFixed(2)}`;
+        function render(){
+          rows.innerHTML='';
+          orders.forEach((o,idx)=>{
+            const date = o.createdAt ? new Date(o.createdAt) : new Date();
+            const tr=document.createElement('tr');
+            tr.innerHTML = `<td>${idx+1}</td><td>${o.productName||''}</td><td>${o.category||''}</td><td>${o.qty||1}</td><td>${fmt(o.totalPrice||0)}</td><td>${date.toLocaleDateString()}</td><td><a href="#" class="link danger" data-del="${o.id}">Delete</a></td>`;
+            rows.appendChild(tr);
+          });
+          if(!orders.length){ rows.innerHTML = '<tr><td colspan="7">No orders yet.</td></tr>'; }
+        }
+        rows.addEventListener('click',(e)=>{
+          if(e.target && e.target.dataset && e.target.dataset.del){
+            const id=e.target.dataset.del;
+            if(confirm('Delete this order?')){
+              orders = orders.filter(o=>String(o.id)!==String(id));
+              localStorage.setItem(key, JSON.stringify(orders));
+              render();
+            }
+          }
+        });
+        render();
+      })();
+    </script>
+  </body>
+</html>

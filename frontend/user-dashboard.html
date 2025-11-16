@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>User Dashboard • Inventory Management System</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      body{background:#0b1022}
+      header{display:none}
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0f1630;border-right:1px solid #1d2a52;padding:20px;position:sticky;top:0;height:100vh}
+      .brand{color:#c8d7ff;font-weight:800;letter-spacing:.4px;margin-bottom:16px}
+      .menu{display:flex;flex-direction:column;gap:8px}
+      .menu a{color:#a9b8e8;text-decoration:none;padding:10px 12px;border-radius:8px;display:flex;align-items:center;gap:8px}
+      .menu a.active,.menu a:hover{background:#172349;color:#e7f1ff}
+      .content{padding:20px}
+      .page-title{font-size:28px;margin:0 0 14px;color:#e7f1ff}
+      .card.white{background:#111a35;border-radius:12px;border:1px solid #1d2a52;padding:16px;box-shadow:0 8px 18px rgba(0,0,0,.2);color:#dbe8ff}
+      .muted{color:#9fb4db}
+      .grid{display:grid;grid-template-columns:1fr;gap:12px}
+      .searchbar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+      .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px}
+      .pill.success-pill{background:#16a34a;color:#eafff3}
+      .pill.warn-pill{background:#f59e0b;color:#fff7eb}
+      .pill.danger-pill{background:#ef4444;color:#ffecec}
+      .btn-order{background:#22c55e;border: none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer}
+      .btn-order:disabled{background:#475569;cursor:not-allowed}
+      table{width:100%}
+      th, td{padding:10px}
+      @media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}}
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">Inventory MS</div>
+        <nav class="menu">
+          <a class="active" href="user-dashboard.html"><span>🗃️</span>Products</a>
+          <a href="user-orders.html" id="nav-orders"><span>🛒</span>Orders</a>
+          <a href="profile.html"><span>👤</span>Profile</a>
+          <a class="logout" href="index.html"><span>↪️</span>Logout</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <h1 class="page-title">Products</h1>
+        <div class="card white">
+          <div class="searchbar">
+            <select id="category">
+              <option value="">Select Category</option>
+            </select>
+            <input id="search" placeholder="Search products..." style="flex:1">
+            <button class="primary" id="btn-search">Search</button>
+          </div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr><th style="width:80px">ID</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th style="width:120px">Action</th></tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Order Modal -->
+        <div id="order-modal" class="card white" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);min-width:320px;z-index:50">
+          <h3 style="margin:0 0 8px">Place Order</h3>
+          <div class="row" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+            <label>Quantity</label>
+            <input id="order-qty" type="number" min="1" value="1">
+            <div id="order-warning" class="muted"></div>
+            <div><strong>Total:</strong> <span id="order-total">$0</span></div>
+          </div>
+          <div class="actions" style="display:flex;gap:10px">
+            <button id="btn-place" class="primary">Place Order</button>
+            <button id="btn-cancel-modal">Cancel</button>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      // Session check and role gating
+      (function(){
+        let current=null; try{ current = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ current=null }
+        if(!current){ location.href='login.html'; return; }
+        if(String(current.role)!=='user'){ location.href='dashboard.html'; return; }
+      })();
+
+      // Determine owner admin's email from session
+      let CURRENT=null; try{ CURRENT = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ CURRENT=null }
+      const OWNER_EMAIL = (CURRENT && CURRENT.ownerEmail) ? String(CURRENT.ownerEmail).toLowerCase() : '';
+      const PRODUCTS_KEY = OWNER_EMAIL ? `ims_products__${OWNER_EMAIL}` : '';
+
+      // Local stores (copy of products with minimal features) and orders
+      const LocalProducts={
+        _key: PRODUCTS_KEY,
+        _read(){ if(!this._key) return []; try{ return JSON.parse(localStorage.getItem(this._key)||'[]')||[] } catch(e){ return [] } },
+        async list(q){ const list=this._read(); if(!q) return list; const s=String(q).toLowerCase();
+          return list.filter(p=>String(p.name||'').toLowerCase().includes(s)||String(p.category||'').toLowerCase().includes(s)); },
+      };
+      const USER_EMAIL = (CURRENT && CURRENT.email) ? String(CURRENT.email).toLowerCase() : '';
+      const LocalOrders={
+        _key:`ims_orders__${USER_EMAIL}`,
+        _read(){ try{ return JSON.parse(localStorage.getItem(this._key)||'[]')||[] } catch(e){ return [] } },
+        _write(list){ localStorage.setItem(this._key, JSON.stringify(list)); },
+        async create(data){ const list=this._read(); list.push({ id: Date.now().toString(), createdAt: new Date().toISOString(), ...data }); this._write(list); }
+      };
+      // Admin-side orders store per owner email
+      const LocalAdminOrders={
+        _key: OWNER_EMAIL ? `ims_admin_orders__${OWNER_EMAIL}` : '',
+        _read(){ if(!this._key) return []; try{ return JSON.parse(localStorage.getItem(this._key)||'[]')||[] } catch(e){ return [] } },
+        _write(list){ if(this._key) localStorage.setItem(this._key, JSON.stringify(list)); },
+        async append(data){ const list=this._read(); list.push(data); this._write(list); }
+      };
+
+      const LocalProductsRW={
+        _key: PRODUCTS_KEY,
+        _read(){ if(!this._key) return []; try{ return JSON.parse(localStorage.getItem(this._key)||'[]')||[] } catch(e){ return [] } },
+        _write(list){ localStorage.setItem(this._key, JSON.stringify(list)); },
+        async updateQty(id, delta){ const list=this._read(); const i=list.findIndex(p=>String(p.id)===String(id)); if(i>-1){ list[i].quantity = Number(list[i].quantity||0) + delta; this._write(list); return list[i]; } }
+      };
+
+      const rows=document.getElementById('rows');
+      const category=document.getElementById('category');
+      const search=document.getElementById('search');
+      // Modal elements
+      const modal=document.getElementById('order-modal');
+      const qtyInput=document.getElementById('order-qty');
+      const totalEl=document.getElementById('order-total');
+      const warnEl=document.getElementById('order-warning');
+      const btnPlace=document.getElementById('btn-place');
+      const btnCancelModal=document.getElementById('btn-cancel-modal');
+      let SELECTED=null; // {prod, buttonEl}
+
+      function stockBadge(q){const n=Number(q||0);let cls='';if(n<=0){cls='danger-pill';}else if(n<=5){cls='warn-pill';}else{cls='success-pill';}return `<span class="pill ${cls}">${n}</span>`;}
+
+      async function load(q){
+        if(!OWNER_EMAIL){
+          rows.innerHTML = '<tr><td colspan="6">No admin assigned to your account yet. Please contact your administrator.</td></tr>';
+          category.innerHTML = '<option value="">Select Category</option>';
+          return;
+        }
+        const list = await LocalProducts.list(q);
+        // fill categories
+        const cats = Array.from(new Set(list.map(p=>String(p.category||'').trim()).filter(Boolean)));
+        category.innerHTML = '<option value="">Select Category</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+        rows.innerHTML='';
+        list
+          .filter(p=>!category.value || String(p.category||'')===category.value)
+          .forEach((p, idx)=>{
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td>${idx+1}</td><td>${p.name}</td><td>${p.category||''}</td><td>$${Number(p.sell_price||0)}</td><td>${stockBadge(p.quantity)}</td><td><button class="btn-order" data-id="${p.id}" ${Number(p.quantity||0)<=0?'disabled':''}>Order</button></td>`;
+            rows.appendChild(tr);
+          });
+      }
+
+      document.getElementById('btn-search').onclick=()=>load(search.value);
+      category.onchange=()=>load(search.value);
+
+      rows.addEventListener('click', async (e)=>{
+        const id=e.target && e.target.dataset && e.target.dataset.id;
+        if(!id) return;
+        const buttonEl = e.target;
+        const listRead = LocalProductsRW._read();
+        const prod = listRead.find(p=>String(p.id)===String(id));
+        if(!prod) return;
+        const available = Number(prod.quantity||0);
+        if(available<=0){ alert('Out of stock'); buttonEl.disabled=true; return; }
+        // init modal
+        SELECTED = { prod, buttonEl };
+        qtyInput.value = '1';
+        qtyInput.min = '1';
+        qtyInput.max = String(available);
+        warnEl.textContent = '';
+        const unitPrice = Number(prod.sell_price||0);
+        totalEl.textContent = `$${(unitPrice*1).toFixed(2)}`;
+        modal.style.display='block';
+      });
+
+      function recalc(){
+        if(!SELECTED) return;
+        const available = Number(SELECTED.prod.quantity||0);
+        const qty = Number(qtyInput.value||1);
+        const unitPrice = Number(SELECTED.prod.sell_price||0);
+        totalEl.textContent = `$${(unitPrice*qty).toFixed(2)}`;
+        if(qty>available){
+          warnEl.textContent = 'Requested quantity exceeds stock. Out of stock.';
+          btnPlace.disabled = true;
+        }else{
+          warnEl.textContent = '';
+          btnPlace.disabled = false;
+        }
+      }
+      qtyInput.addEventListener('input', recalc);
+      btnCancelModal.addEventListener('click', ()=>{ modal.style.display='none'; SELECTED=null; });
+      btnPlace.addEventListener('click', async ()=>{
+        if(!SELECTED) return;
+        const qty = Number(qtyInput.value||1);
+        const available = Number(SELECTED.prod.quantity||0);
+        if(qty>available){ warnEl.textContent='Requested quantity exceeds stock. Out of stock.'; return; }
+        try{
+          let current=null; try{ current = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ current=null }
+          const unitPrice = Number(SELECTED.prod.sell_price||0);
+          await LocalOrders.create({
+            productId: SELECTED.prod.id,
+            productName: SELECTED.prod.name||'',
+            category: SELECTED.prod.category||'',
+            qty: qty,
+            unitPrice: unitPrice,
+            totalPrice: unitPrice*qty,
+            userEmail: current && current.email,
+            ownerEmail: OWNER_EMAIL
+          });
+          // Mirror into admin's order list
+          await LocalAdminOrders.append({
+            id: Date.now().toString(),
+            createdAt: new Date().toISOString(),
+            productId: SELECTED.prod.id,
+            productName: SELECTED.prod.name||'',
+            category: SELECTED.prod.category||'',
+            qty: qty,
+            unitPrice: unitPrice,
+            totalPrice: unitPrice*qty,
+            userEmail: current && current.email,
+            ownerEmail: OWNER_EMAIL
+          });
+          const updated = await LocalProductsRW.updateQty(SELECTED.prod.id, -qty);
+          // update UI row
+          const tr = SELECTED.buttonEl.closest('tr');
+          const qtyCell = tr.querySelector('td:nth-child(5)');
+          qtyCell.innerHTML = stockBadge(updated.quantity);
+          if(Number(updated.quantity)<=0){ SELECTED.buttonEl.disabled = true; }
+          modal.style.display='none';
+          SELECTED=null;
+          alert('Order placed');
+        }catch(err){ alert('Order failed'); }
+      });
+
+      load();
+    </script>
+  </body>
+</html>

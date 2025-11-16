@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inventory Management System</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      :root{
+        --grad-1: linear-gradient(135deg,#ff7a7a 0%,#ffb86b 100%);
+        --grad-2: linear-gradient(135deg,#6a9dff 0%,#9a6bff 100%);
+        --grad-3: linear-gradient(135deg,#4fd1c5 0%,#22c55e 100%);
+        --grad-4: linear-gradient(135deg,#f472b6 0%,#fb7185 100%);
+        --card-bg: #0f1630;
+        --card-bd: #1d2a52;
+      }
+      body{background:#eef1f6}
+      .bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+      .bg .shape{position:absolute;opacity:.9}
+      .bg .tl{left:-80px;top:-80px;width:280px;height:280px}
+      .bg .tr{right:-60px;top:-20px;width:360px;height:260px}
+      .bg .bl{left:-90px;bottom:-60px;width:360px;height:260px;opacity:.85}
+      .bg .br{right:40px;bottom:20px;width:120px;height:120px;opacity:.95}
+      .hero{
+        background:transparent;margin-top:24px;position:relative
+      }
+      .blob{position:absolute;border-radius:9999px;filter:blur(16px);opacity:.25;z-index:0}
+      .blob.purple{width:320px;height:320px;background:#9a6bff;top:-60px;right:-60px}
+      .blob.yellow{width:220px;height:220px;background:#f5c161;bottom:-60px;left:-40px}
+      .hero-card{position:relative;z-index:1;background:#0f1630;border-radius:24px;box-shadow:0 18px 48px rgba(22,28,45,.22);padding:48px;min-height:360px}
+      .hero-card:before{content:"";position:absolute;inset:auto 24px -26px 24px;height:24px;border-radius:20px;background:rgba(239,71,111,.45);filter:blur(12px);z-index:-1}
+      .hero-card:after{content:"";position:absolute;right:32px;bottom:-18px;width:180px;height:180px;border-radius:50%;background:#f6c34f;filter:blur(3px);opacity:.85;z-index:-1}
+      .hero-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:24px;align-items:center}
+      @media(max-width:900px){.hero-grid{grid-template-columns:1fr}}
+      .title{font-size:48px;line-height:1.05;margin:0;color:#ffffff}
+      .subtitle{margin:12px 0 20px 0;color:#5c6b8a;max-width:520px}
+      .cta{display:flex;gap:10px;flex-wrap:wrap}
+      .btn-pill{display:inline-block;padding:12px 18px;border-radius:999px;text-decoration:none;color:#fff;font-weight:700}
+      .btn-primary{background:var(--grad-2)}
+      .btn-ghost{background:#f1f5ff;color:#3451b2}
+      .illu{width:100%;height:100%;min-height:220px;display:flex;align-items:center;justify-content:center}
+      .illu svg{max-width:520px;width:100%;height:auto}
+      .nav-right{display:flex;gap:8px;align-items:center}
+      /* card header styles to mimic reference */
+      .card-top{display:flex;justify-content:flex-end;align-items:center;margin-bottom:18px}
+      .brand{font-weight:700;color:#7d87a5;letter-spacing:.4px}
+      .brand em{color:#1f2a44;font-style:normal}
+      .card-links{display:flex;gap:16px;align-items:center}
+      .card-links a{color:#dbe8ff;text-decoration:none;font-weight:600}
+      .pill{display:inline-block;padding:10px 16px;border-radius:999px;background:#5f73ff;color:#fff;text-decoration:none;font-weight:700}
+      .cta{display:flex;gap:10px;flex-wrap:wrap}
+      .btn-gradient{border:none;color:#fff;border-radius:10px;padding:12px 16px;font-weight:700}
+      a.btn-gradient{display:inline-block;text-decoration:none}
+      a.primary{display:inline-block;text-decoration:none;background:#316aff;border:1px solid #316aff;color:#fff;border-radius:10px;padding:12px 16px;font-weight:700}
+      .btn-pink{background: var(--grad-4)}
+      .btn-green{background: var(--grad-3)}
+      .btn-orange{background: var(--grad-1)}
+      .section{margin-top:28px}
+      .feature{background:var(--card-bg);border:1px solid var(--card-bd);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+      .feature:before{content:"";position:absolute;inset:0;border-radius:14px;padding:1px;background:linear-gradient(120deg,rgba(255,255,255,.06),rgba(255,255,255,0));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+      .feature h4{margin:0 0 8px 0}
+      .pill{display:inline-block;padding:8px 12px;border-radius:999px;color:#0b1020;font-weight:700;background:#fff}
+      .category-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      @media(max-width:900px){.category-grid{grid-template-columns:1fr 1fr}}
+      @media(max-width:600px){.category-grid{grid-template-columns:1fr}}
+      .category{border-radius:14px;padding:16px;color:#fff;display:flex;flex-direction:column;gap:6px;min-height:110px}
+      .category small{opacity:.95}
+      .category.elec{background: var(--grad-2)}
+      .category.grocery{background: var(--grad-3)}
+      .category.fashion{background: var(--grad-4)}
+      .category.misc{background: var(--grad-1)}
+      footer{margin:40px 0 20px;color:#9fb4db;text-align:center}
+      /* layout blocks */
+      .cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+      .cta-row .btn-pill{border-radius:12px}
+      .imagery{margin-top:28px}
+      .imagery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+      @media(max-width:900px){.imagery-grid{grid-template-columns:1fr 1fr}}
+      @media(max-width:600px){.imagery-grid{grid-template-columns:1fr}}
+      .img-card{background:#ffffff;border-radius:16px;box-shadow:0 10px 24px rgba(22,28,45,.14);overflow:hidden;border:1px solid #e6e9f3}
+      .img-card img{display:block;width:100%;height:240px;object-fit:cover}
+      .supporting .points{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      @media(max-width:900px){.supporting .points{grid-template-columns:1fr}}
+      .supporting .point{background:#0f1630;border:1px solid #1d2a52;border-radius:12px;padding:16px}
+      .social{margin-top:28px}
+      .stars{color:#ffd166;font-size:18px}
+      footer.site{margin:40px 0 20px;text-align:center;color:#8aa0c5}
+      /* removed alternate format styles */
+      body.bg-a{background:#ffffff}
+      body.bg-b{background:linear-gradient(180deg,#e8f1ff 0%,#eef3ff 50%,#ffffff 100%)}
+      body.bg-a .bg, body.bg-b .bg{display:none}
+      /* custom image background option */
+      body.bg-img{background:#f2f6ff url('https://img.freepik.com/premium-photo/automated-inventory-management-system-wallpaper_987764-40035.jpg') no-repeat center top / cover fixed}
+      body.bg-img .bg{display:none}
+      /* intro section */
+      .intro{margin-top:24px}
+      .intro .card{background:#0f1630;border:1px solid #1d2a52;border-radius:16px;padding:20px}
+      .intro-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;align-items:center}
+      @media(max-width:900px){.intro-grid{grid-template-columns:1fr}}
+      .intro h3{margin:0 0 8px 0;color:#ffffff}
+      .intro p{margin:0;color:#c9d4ee}
+      .intro img{width:100%;height:auto;border-radius:12px;box-shadow:0 10px 24px rgba(22,28,45,.25)}
+    </style>
+  </head>
+  <body class="bg-img">
+    <div class="bg" aria-hidden="true">
+      <!-- top-left purple circle -->
+      <svg class="shape tl" viewBox="0 0 200 200"><circle cx="100" cy="100" r="100" fill="#8065ff"/></svg>
+      <!-- top-right purple curve blob -->
+      <svg class="shape tr" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+        <path d="M0,0 C220,0 240,140 400,140 L400,0 Z" fill="#b395ff"/>
+      </svg>
+      <!-- bottom-left dark blob -->
+      <svg class="shape bl" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+        <path d="M0,260 C120,160 260,340 400,220 L400,300 L0,300 Z" fill="#2d2556"/>
+      </svg>
+      <!-- bottom-right yellow circle shadow -->
+      <svg class="shape br" viewBox="0 0 200 200"><circle cx="100" cy="100" r="80" fill="#f6c34f"/></svg>
+    </div>
+    
+
+    <div class="container" style="position:relative;z-index:1;max-width:1200px">
+      <section class="hero">
+        <div class="blob purple"></div>
+        <div class="blob yellow"></div>
+        <div class="hero-card">
+          <div class="card-top">
+            <div class="card-links">
+              <a href="#">Home</a>
+              <a href="about.html">About us</a>
+            </div>
+          </div>
+          <div class="hero-grid">
+            <div>
+              <h2 class="title">INVENTORY MANAGEMENT SYSTEM</h2>
+              <div class="cta" style="margin-top:12px">
+                <a href="login.html" class="btn-pill btn-ghost">Log In</a>
+                <a href="signup.html" class="btn-pill btn-primary">Sign Up</a>
+              </div>
+            </div>
+            <div class="illu">
+              <!-- enhanced illustrative SVG -->
+              <svg viewBox="0 0 520 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Inventory Illustration">
+                <defs>
+                  <linearGradient id="g1" x1="0" x2="1">
+                    <stop offset="0%" stop-color="#6a9dff"/>
+                    <stop offset="100%" stop-color="#9a6bff"/>
+                  </linearGradient>
+                  <linearGradient id="g2" x1="0" x2="1">
+                    <stop offset="0%" stop-color="#f5c161"/>
+                    <stop offset="100%" stop-color="#ff8a7a"/>
+                  </linearGradient>
+                  <linearGradient id="g3" x1="0" x2="1">
+                    <stop offset="0%" stop-color="#9ee7e0"/>
+                    <stop offset="100%" stop-color="#22c55e"/>
+                  </linearGradient>
+                </defs>
+                <!-- shelf/card -->
+                <rect x="30" y="70" width="260" height="160" rx="18" fill="url(#g1)"/>
+                <rect x="50" y="96" width="88" height="40" rx="10" fill="#ffffff" opacity=".95"/>
+                <rect x="152" y="96" width="118" height="40" rx="10" fill="#ffffff" opacity=".95"/>
+                <rect x="50" y="146" width="88" height="40" rx="10" fill="#ffffff" opacity=".95"/>
+                <rect x="152" y="146" width="118" height="40" rx="10" fill="#ffffff" opacity=".95"/>
+                <!-- phone/store module -->
+                <g opacity=".98">
+                  <rect x="320" y="40" width="160" height="220" rx="22" fill="#ffffff"/>
+                  <rect x="336" y="64" width="128" height="28" rx="8" fill="#e9ecff"/>
+                  <rect x="336" y="100" width="128" height="116" rx="14" fill="url(#g2)"/>
+                </g>
+                <!-- magnifier shadow -->
+                <ellipse cx="260" cy="280" rx="220" ry="20" fill="#dfe6fb"/>
+                <!-- boxes -->
+                <rect x="360" y="120" width="36" height="28" rx="6" fill="#ffd39a" stroke="#f09f5a" stroke-width="2"/>
+                <rect x="404" y="120" width="36" height="28" rx="6" fill="#ffd39a" stroke="#f09f5a" stroke-width="2"/>
+                <rect x="382" y="156" width="36" height="28" rx="6" fill="#ffd39a" stroke="#f09f5a" stroke-width="2"/>
+                <!-- success badge -->
+                <circle cx="120" cy="60" r="14" fill="url(#g3)"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      
+
+      <!-- Intro copy + image -->
+      <section class="intro">
+        <div class="card">
+          <div class="intro-grid">
+            <div>
+              <h3>Your smart, efficient, and user-friendly stock manager</h3>
+              <p>The Inventory Management System helps shops, warehouses, and businesses track products, sales, and stock levels accurately with just a few clicks. No more handwritten records—every product detail is safely stored in a MySQL database, keeping your data organized and secure.</p>
+            </div>
+            <div>
+              <img alt="Inventory management illustration" src="https://static.vecteezy.com/system/resources/previews/015/181/361/non_2x/inventory-control-by-online-system-inventory-management-with-goods-demand-professional-worker-is-checking-goods-and-stock-supply-vector.jpg">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      
+
+      
+
+      <!-- Supporting copy -->
+      <section class="section supporting">
+        <div class="points">
+          <div class="point"><strong>Fast</strong><div class="muted">Quick product search and entry</div></div>
+          <div class="point"><strong>Accurate</strong><div class="muted">Auto stock updates after sales</div></div>
+          <div class="point"><strong>Alerts</strong><div class="muted">Know what to reorder</div></div>
+        </div>
+      </section>
+
+      <!-- Social proof -->
+      <section class="section social">
+        <div class="card">
+          <div class="flex" style="align-items:center;gap:12px">
+            <div class="stars">★★★★★</div>
+            <div class="muted">Trusted by small shops and warehouses</div>
+          </div>
+        </div>
+      </section>
+
+      
+
+
+      
+    </div>
+
+  </body>
+  </html>

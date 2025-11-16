@@ -1,0 +1,126 @@
+ <!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign Up • Inventory Manage System</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    header {
+      display: none
+    }
+
+    .auth {
+      max-width: 520px;
+      margin: 32px auto
+    }
+
+    .auth .card {
+      padding: 24px
+    }
+
+    .auth h2 {
+      margin: 0 0 12px 0
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center
+    }
+
+    .link {
+      color: #9ec1ff;
+      text-decoration: none
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>INVENTORY MANAGE SYSTEM</h1>
+    <nav class="nav">
+      <a class="navlink" href="index.html">Home</a>
+      <a class="navlink" href="login.html">Log In</a>
+      <a class="navlink active" href="signup.html">Sign Up</a>
+      <a class="navlink" href="products.html">Products</a>
+      <a class="navlink" href="sales.html">Sales</a>
+      <a class="navlink" href="stock.html">Stock</a>
+    </nav>
+  </header>
+  <div class="container auth">
+    <div class="card">
+      <h2>Sign Up</h2>
+      <form id="signup-form">
+        <div class="row">
+          <input name="name" placeholder="Full Name" required>
+          <input name="email" type="email" placeholder="Email" required>
+        </div>
+        <div class="row">
+          <input name="password" type="password" placeholder="Password" required>
+          <input name="confirm" type="password" placeholder="Confirm Password" required>
+        </div>
+        <div class="row">
+          <select name="role" required>
+            <option value="user" selected>User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="row" id="row-owner" style="display:block">
+          <input name="owner_email" type="email" placeholder="Owner Admin Email (required for user)">
+        </div>
+        <div class="row actions">
+          <button class="primary" type="submit">Create Account</button>
+          <a class="link" href="login.html">Already have an account?</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.getElementById('signup-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const name = String(fd.get('name') || '').trim();
+      const email = String(fd.get('email') || '').trim().toLowerCase();
+      const password = String(fd.get('password') || '');
+      const confirm = String(fd.get('confirm') || '');
+      const role = String(fd.get('role') || 'user');
+      const ownerEmailInput = String(fd.get('owner_email')||'').trim().toLowerCase();
+      if (password !== confirm) {
+        alert('Passwords do not match');
+        return;
+      }
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('ims_users') || '[]') || []
+      } catch (e) {}
+      if (users.some(function(u) {
+          return u.email === email;
+        })) {
+        alert('Email already registered');
+        location.href = 'login.html';
+        return;
+      }
+      users.push({
+        approved: (role === 'user'),
+        role: role,
+        createdBy: 'self',
+        ownerEmail: (role==='user' ? ownerEmailInput : ''),
+        name: name,
+        email: email,
+        password: password
+      });
+      localStorage.setItem('ims_users', JSON.stringify(users));
+      alert('Account created. Please log in.');
+      location.href = 'login.html';
+    });
+    // Toggle owner admin email field based on role
+    (function(){
+      const roleSel = document.querySelector('select[name="role"]');
+      const rowOwner = document.getElementById('row-owner');
+      function sync(){ rowOwner.style.display = (String(roleSel.value)==='user') ? 'block' : 'none'; }
+      roleSel.addEventListener('change', sync); sync();
+    })();
+  </script>
+</body>
+</html>

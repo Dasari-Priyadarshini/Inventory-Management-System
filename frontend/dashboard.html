@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>User Dashboard • Inventory Management System</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      body{background:#0b1022}
+      header{display:none}
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0f1630;border-right:1px solid #1d2a52;padding:20px;position:sticky;top:0;height:100vh}
+      .brand{color:#c8d7ff;font-weight:800;letter-spacing:.4px;margin-bottom:16px}
+      .menu{display:flex;flex-direction:column;gap:8px}
+      .menu a{color:#a9b8e8;text-decoration:none;padding:10px 12px;border-radius:8px;display:flex;align-items:center;gap:8px}
+      .menu a.active,.menu a:hover{background:#172349;color:#e7f1ff}
+      .content{padding:20px}
+      .dash-title{font-size:28px;margin:0 0 14px;color:#e7f1ff}
+      .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
+      @media(max-width:600px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.stats{grid-template-columns:1fr}}
+      .stat{border-radius:12px;padding:16px;color:#fff;font-weight:700;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+      .stat.pink{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+      .stat.teal{background:linear-gradient(135deg,#22c55e,#16a34a)}
+      .stat.amber{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+      .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+      @media(max-width:900px){.cards{grid-template-columns:1fr 1fr}}
+      @media(max-width:600px){.cards{grid-template-columns:1fr}}
+      .card.white{background:#111a35;border-radius:12px;border:1px solid #1d2a52;padding:16px;box-shadow:0 8px 18px rgba(0,0,0,.2);color:#dbe8ff}
+      .muted{color:#9fb4db}
+      .logout{margin-top:auto;display:block;color:#fda4af}
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">Inventory MS</div>
+        <nav class="menu">
+          <a class="active" href="#"><span>🏠</span>Dashboard</a>
+          <a href="products.html"><span>📦</span>Products</a>
+          <a href="categories.html"><span>📂</span>Categories</a>
+          <a href="admin-orders.html"><span>🧾</span>Orders</a>
+          <a href="suppliers.html"><span>🚚</span>Suppliers</a>
+          <a href="users.html"><span>👥</span>Users</a>
+          <a href="profile.html"><span>👤</span>Profile</a>
+          <a class="logout" href="index.html"><span>↩️</span>Logout</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <h1 class="dash-title">Dashboard</h1>
+        <div class="stats">
+          <div class="stat pink">Total Products
+            <div style="font-size:26px;margin-top:6px" id="stat-products">0</div>
+          </div>
+          <div class="stat teal">Total Stock
+            <div style="font-size:26px;margin-top:6px" id="stat-stock">0</div>
+          </div>
+          <div class="stat amber">Order Today
+            <div style="font-size:26px;margin-top:6px" id="stat-orders">0</div>
+          </div>
+        </div>
+        <div class="cards">
+          <div class="card white">
+            <h3 style="margin:0 0 8px">Out of Stock Products</h3>
+            <div class="muted" id="out-of-stock">Loading…</div>
+          </div>
+          <div class="card white">
+            <h3 style="margin:0 0 8px">Highest Sale Product</h3>
+            <div class="muted" id="highest-sale">Loading…</div>
+          </div>
+          <div class="card white">
+            <h3 style="margin:0 0 8px">Low Stock Products</h3>
+            <div class="muted" id="low-stock">Loading…</div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="assets/js/api.js"></script>
+    <script>
+      (function(){
+        let current=null; try{ current = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ current=null }
+        if(!current){ location.href='login.html'; return; }
+        // Approved check is enforced at login; this is a light safeguard if session is tampered.
+      })();
+    </script>
+    <script>
+      async function loadStats(){
+        // Read current user (admin)
+        let current=null; try{ current = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ current=null }
+        const adminEmail = (current && current.email||'').toLowerCase();
+        const productsKey = `ims_products__${adminEmail}`;
+        const ordersKey = `ims_admin_orders__${adminEmail}`;
+
+        // Read per-admin products from localStorage
+        let products=[]; try{ products = JSON.parse(localStorage.getItem(productsKey)||'[]')||[] }catch(e){ products=[] }
+        // Read admin orders from localStorage
+        let orders=[]; try{ orders = JSON.parse(localStorage.getItem(ordersKey)||'[]')||[] }catch(e){ orders=[] }
+
+        const totalProducts = products.length;
+        const totalStock = products.reduce((sum,p)=>sum + Number(p.quantity||0),0);
+        const out = products.filter(p => Number(p.quantity||0) === 0).map(p=>p.name).slice(0,5);
+        // Define low stock as <= 5 and > 0
+        const low = products.filter(p => Number(p.quantity||0) > 0 && Number(p.quantity||0) <= 5).map(p=>`${p.name} - ${p.quantity}`).slice(0,5);
+
+        // Orders today (based on createdAt date)
+        const today = new Date();
+        const isSameDay = (d1,d2) => d1.getFullYear()===d2.getFullYear() && d1.getMonth()===d2.getMonth() && d1.getDate()===d2.getDate();
+        const ordersToday = orders.filter(o=>{
+          if(!o.createdAt) return false;
+          const d = new Date(o.createdAt);
+          return isSameDay(today,d);
+        }).length;
+
+        // Highest sale product (by total units sold)
+        const totalsByProduct = {};
+        orders.forEach(o=>{
+          const key = String(o.productName||'').trim();
+          if(!key) return;
+          const qty = Number(o.qty||0);
+          if(!totalsByProduct[key]) totalsByProduct[key] = 0;
+          totalsByProduct[key] += qty;
+        });
+        let highestName = '';
+        let highestQty = 0;
+        Object.keys(totalsByProduct).forEach(name=>{
+          const qty = totalsByProduct[name];
+          if(qty>highestQty){ highestQty = qty; highestName = name; }
+        });
+
+        document.getElementById('stat-products').textContent = String(totalProducts);
+        document.getElementById('stat-stock').textContent = String(totalStock);
+        document.getElementById('stat-orders').textContent = String(ordersToday);
+
+        document.getElementById('out-of-stock').textContent = out.length? out.join(', ') : 'None';
+        document.getElementById('low-stock').textContent = low.length? low.join(', ') : 'None';
+        document.getElementById('highest-sale').textContent = highestName ? `${highestName} - Total units sold: ${highestQty}` : 'No sales yet.';
+      }
+      loadStats();
+    </script>
+  </body>
+</html>

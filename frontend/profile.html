@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      body{background:#0b1022}
+      header{display:none}
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0f1630;border-right:1px solid #1d2a52;padding:20px;position:sticky;top:0;height:100vh}
+      .brand{color:#c8d7ff;font-weight:800;letter-spacing:.4px;margin-bottom:16px}
+      .menu{display:flex;flex-direction:column;gap:8px}
+      .menu a{color:#a9b8e8;text-decoration:none;padding:10px 12px;border-radius:8px}
+      .menu a.active,.menu a:hover{background:#172349;color:#e7f1ff}
+      .content{padding:20px}
+      .page-title{font-size:28px;margin:0 0 14px;color:#e7f1ff}
+      .card.white{background:#111a35;border-radius:12px;border:1px solid #1d2a52;padding:16px;box-shadow:0 8px 18px rgba(0,0,0,.2);color:#dbe8ff;max-width:640px}
+      .row{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+      label{color:#9fb4db;font-size:12px}
+      input{width:100%}
+      .actions{display:flex;gap:10px}
+      .warn{background:#f59e0b;border:none;color:#fff;padding:8px 12px;border-radius:8px}
+      .hidden{display:none}
+      .btn-green{background:#22c55e;color:#fff;border:none;padding:8px 12px;border-radius:8px}
+      .btn-gray{background:#475569;color:#fff;border:none;padding:8px 12px;border-radius:8px}
+      input:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.5);border-color:#3b82f6}
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">Inventory MS</div>
+        <nav class="menu" id="menu"></nav>
+      </aside>
+      <main class="content">
+        <h1 class="page-title">User Profile</h1>
+        <div class="card white">
+          <form id="form">
+            <div class="row">
+              <label>Name</label>
+              <input name="name" placeholder="Name" disabled>
+            </div>
+            <div class="row">
+              <label>Email</label>
+              <input name="email" placeholder="Email" disabled>
+            </div>
+            <div class="row">
+              <label>Address</label>
+              <input name="address" placeholder="Address" disabled>
+            </div>
+            <div class="row hidden" id="row-new-pass" style="display:none">
+              <label>New Password</label>
+              <input name="new_password" type="password" placeholder="Enter new password (optional)">
+            </div>
+            <div class="row hidden" id="row-confirm-pass" style="display:none">
+              <label>Confirm Password</label>
+              <input name="confirm_password" type="password" placeholder="Re-enter new password">
+            </div>
+            <div class="actions">
+              <button type="button" id="btn-edit" class="warn">Edit Profile</button>
+              <button type="submit" id="btn-save" class="btn-green" style="display:none">Save Changes</button>
+              <button type="button" id="btn-cancel" class="btn-gray" style="display:none">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const form = document.getElementById('form');
+      const btnEdit = document.getElementById('btn-edit');
+      const btnSave = document.getElementById('btn-save');
+      const btnCancel = document.getElementById('btn-cancel');
+      const menu = document.getElementById('menu');
+
+      // Session
+      let CURRENT=null; try{ CURRENT = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ CURRENT=null }
+      if(!CURRENT){ location.href='login.html'; }
+
+      // Build sidebar by role
+      if(String(CURRENT.role)==='user'){
+        menu.innerHTML = '<a href="user-dashboard.html">Products</a>'+
+                         '<a href="user-orders.html">Orders</a>'+
+                         '<a class="active" href="profile.html">Profile</a>'+
+                         '<a class="logout" href="index.html">Logout</a>';
+      } else {
+        menu.innerHTML = '<a href="dashboard.html">Dashboard</a>'+
+                         '<a href="products.html">Products</a>'+
+                         '<a href="categories.html">Categories</a>'+
+                         '<a href="sales.html">Orders</a>'+
+                         '<a href="suppliers.html">Suppliers</a>'+
+                         '<a href="users.html">Users</a>'+
+                         '<a class="active" href="profile.html">Profile</a>'+
+                         '<a class="logout" href="index.html">Logout</a>';
+      }
+
+      // Users store
+      const UsersStore = {
+        _key: 'ims_users',
+        _read(){ try { return JSON.parse(localStorage.getItem(this._key)||'[]')||[] } catch(e){ return [] } },
+        _write(list){ localStorage.setItem(this._key, JSON.stringify(list)); }
+      };
+
+      function setDisabled(disabled){
+        form.name.disabled = disabled; // editable
+        form.email.disabled = true;    // email stays read-only
+        form.address.disabled = disabled;
+      }
+
+      function enterEdit(){
+        btnEdit.style.display='none'; btnSave.style.display='inline-block'; btnCancel.style.display='inline-block'; setDisabled(false);
+        const rn = document.getElementById('row-new-pass');
+        const rc = document.getElementById('row-confirm-pass');
+        rn.classList.remove('hidden'); rc.classList.remove('hidden');
+        rn.style.display='flex'; rc.style.display='flex';
+      }
+      function exitEdit(){
+        btnEdit.style.display='inline-block'; btnSave.style.display='none'; btnCancel.style.display='none'; setDisabled(true);
+        const rn = document.getElementById('row-new-pass');
+        const rc = document.getElementById('row-confirm-pass');
+        rn.classList.add('hidden'); rc.classList.add('hidden');
+        rn.style.display='none'; rc.style.display='none';
+        form.new_password.value=''; form.confirm_password.value='';
+      }
+
+      function load(){
+        const list = UsersStore._read();
+        const me = list.find(u=>String(u.email||'').toLowerCase()===String(CURRENT.email||'').toLowerCase()) || { name: CURRENT.name||'', email: CURRENT.email||'', address: '' };
+        form.name.value = me.name || '';
+        form.email.value = me.email || '';
+        form.address.value = me.address || '';
+        exitEdit();
+      }
+
+      btnEdit.onclick = () => enterEdit();
+      btnCancel.onclick = () => { load(); };
+
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        const list = UsersStore._read();
+        const idx = list.findIndex(u=>String(u.email||'').toLowerCase()===String(CURRENT.email||'').toLowerCase());
+        if(idx>-1){
+          list[idx].name = data.name;
+          list[idx].address = data.address;
+          if (data.new_password) {
+            if (String(data.new_password).length < 6) { alert('Password must be at least 6 characters'); return; }
+            if (data.new_password !== data.confirm_password) { alert('Passwords do not match'); return; }
+            list[idx].password = data.new_password;
+          }
+          UsersStore._write(list);
+          // refresh session display name
+          try{ sessionStorage.setItem('ims_current_user', JSON.stringify({ ...CURRENT, name: list[idx].name })); }catch(_e){}
+          exitEdit();
+          alert('Profile updated');
+        } else {
+          alert('User record not found');
+        }
+      };
+
+      load();
+    </script>
+  </body>
+</html>

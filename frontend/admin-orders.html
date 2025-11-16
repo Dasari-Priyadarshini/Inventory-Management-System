@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Orders • Admin</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      body{background:#0b1022}
+      header{display:none}
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0f1630;border-right:1px solid #1d2a52;padding:20px;position:sticky;top:0;height:100vh}
+      .brand{color:#c8d7ff;font-weight:800;letter-spacing:.4px;margin-bottom:16px}
+      .menu{display:flex;flex-direction:column;gap:8px}
+      .menu a{color:#a9b8e8;text-decoration:none;padding:10px 12px;border-radius:8px}
+      .menu a.active,.menu a:hover{background:#172349;color:#e7f1ff}
+      .content{padding:20px}
+      .page-title{font-size:28px;margin:0 0 14px;color:#e7f1ff}
+      .card.white{background:#111a35;border-radius:12px;border:1px solid #1d2a52;padding:16px;box-shadow:0 8px 18px rgba(0,0,0,.2);color:#dbe8ff}
+      th, td{padding:10px}
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">Inventory MS</div>
+        <nav class="menu">
+          <a href="dashboard.html">Dashboard</a>
+          <a href="products.html">Products</a>
+          <a href="categories.html">Categories</a>
+          <a class="active" href="admin-orders.html">Orders</a>
+          <a href="suppliers.html">Suppliers</a>
+          <a href="users.html">Users</a>
+          <a href="profile.html">Profile</a>
+          <a class="logout" href="index.html">Logout</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <h1 class="page-title">Orders</h1>
+        <div class="card white">
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr><th style="width:80px">S NO</th><th>Name</th><th>Address</th><th>Product Name</th><th>Category</th><th>Quantity</th><th>Total Price</th><th>Order Date</th></tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      (function(){
+        let current=null; try{ current = JSON.parse(sessionStorage.getItem('ims_current_user')||'null'); }catch(e){ current=null }
+        const email = current && current.email ? String(current.email).toLowerCase() : '';
+        const key = `ims_admin_orders__${email}`;
+        let orders=[]; try{ orders = JSON.parse(localStorage.getItem(key)||'[]')||[] }catch(e){ orders=[] }
+        const rows=document.getElementById('rows');
+        // users directory for name/address
+        let users=[]; try{ users = JSON.parse(localStorage.getItem('ims_users')||'[]')||[] }catch(e){ users=[] }
+        const fmt = (n)=>`$${Number(n||0).toFixed(2)}`;
+        function render(){
+          rows.innerHTML='';
+          orders.forEach((o,idx)=>{
+            const date = o.createdAt ? new Date(o.createdAt) : new Date();
+            const u = users.find(x=>String(x.email||'').toLowerCase()===String(o.userEmail||'').toLowerCase()) || {};
+            const tr=document.createElement('tr');
+            tr.innerHTML = `<td>${idx+1}</td><td>${u.name||''}</td><td>${u.address||''}</td><td>${o.productName||''}</td><td>${o.category||''}</td><td>${o.qty||1}</td><td>${fmt(o.totalPrice||0)}</td><td>${date.toLocaleDateString()}</td>`;
+            rows.appendChild(tr);
+          });
+          if(!orders.length){ rows.innerHTML = '<tr><td colspan="8">No orders yet.</td></tr>'; }
+        }
+        render();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Suppliers</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+      body{background:#0b1022}
+      header{display:none}
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0f1630;border-right:1px solid #1d2a52;padding:20px;position:sticky;top:0;height:100vh}
+      .brand{color:#c8d7ff;font-weight:800;letter-spacing:.4px;margin-bottom:16px}
+      .menu{display:flex;flex-direction:column;gap:8px}
+      .menu a{color:#a9b8e8;text-decoration:none;padding:10px 12px;border-radius:8px}
+      .menu a.active,.menu a:hover{background:#172349;color:#e7f1ff}
+      .content{padding:20px}
+      .page-title{font-size:28px;margin:0 0 14px;color:#e7f1ff}
+      .card.white{background:#111a35;border-radius:12px;border:1px solid #1d2a52;padding:16px;box-shadow:0 8px 18px rgba(0,0,0,.2);color:#dbe8ff}
+      .muted{color:#9fb4db}
+      .flex{display:flex;gap:10px;align-items:center}
+      .right{margin-left:auto}
+      .row{display:flex;gap:10px;margin-bottom:10px}
+      .row input{flex:1}
+      table{width:100%}
+      th, td{padding:10px}
+      .actions-cell a.link{color:#2563eb;text-decoration:none;margin-right:12px}
+      .actions-cell a.link.danger{color:#ef4444}
+      .searchbar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+      .dialog{display:none}
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">Inventory MS</div>
+        <nav class="menu">
+          <a href="dashboard.html">Dashboard</a>
+          <a href="products.html">Products</a>
+          <a href="categories.html">Categories</a>
+          <a href="admin-orders.html">Orders</a>
+          <a class="active" href="suppliers.html">Suppliers</a>
+          <a href="users.html">Users</a>
+          <a href="profile.html">Profile</a>
+          <a class="logout" href="index.html">Logout</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <h1 class="page-title">Supplier Management</h1>
+        <div class="card white">
+          <div class="searchbar">
+            <input id="search" placeholder="Search suppliers...">
+            <div class="right"></div>
+            <button class="primary" id="btn-new">Add Supplier</button>
+          </div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr><th style="width:80px">ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th style="width:140px">Actions</th></tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card white dialog" id="form-card">
+          <h3 style="margin:0 0 8px" id="form-title">Add Supplier</h3>
+          <form id="form">
+            <div class="row"><input name="name" placeholder="Name" required></div>
+            <div class="row"><input name="email" placeholder="Email"></div>
+            <div class="row"><input name="phone" placeholder="Phone"></div>
+            <div class="row"><input name="address" placeholder="Address"></div>
+            <div class="row">
+              <button class="primary" type="submit">Save</button>
+              <button type="button" id="btn-cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const rows = document.getElementById('rows');
+      const formCard = document.getElementById('form-card');
+      const formTitle = document.getElementById('form-title');
+      const form = document.getElementById('form');
+      const btnNew = document.getElementById('btn-new');
+      const btnCancel = document.getElementById('btn-cancel');
+      let editingId = null;
+
+      const LocalSuppliers = {
+        _key: 'ims_suppliers',
+        _read(){ try { return JSON.parse(localStorage.getItem(this._key)||'[]')||[] } catch(e){ return [] } },
+        _write(list){ localStorage.setItem(this._key, JSON.stringify(list)); },
+        async list(q){ const list=this._read(); if(!q) return list; const s=String(q).toLowerCase(); return list.filter(su=>[su.name,su.email,su.phone,su.address].some(v=>String(v||'').toLowerCase().includes(s))); },
+        async get(id){ return this._read().find(su=>String(su.id)===String(id)); },
+        async create(data){ const list=this._read(); const id=Date.now().toString(); const su={id, ...data}; list.push(su); this._write(list); return su; },
+        async update(id, data){ const list=this._read(); const i=list.findIndex(su=>String(su.id)===String(id)); if(i>-1){ list[i] = { ...list[i], ...data, id:list[i].id }; this._write(list); return list[i]; } throw new Error('Not found'); },
+        async remove(id){ const list=this._read().filter(su=>String(su.id)!==String(id)); this._write(list); return { ok:true }; }
+      };
+      const Store = LocalSuppliers;
+
+      function showForm(show){ formCard.style.display = show? 'block':'none'; }
+
+      async function load(q){
+        const list = await Store.list(q);
+        rows.innerHTML = '';
+        list.forEach((su, idx)=>{
+          const tr=document.createElement('tr');
+          tr.innerHTML = `<td>${idx+1}</td><td>${su.name||''}</td><td>${su.email||''}</td><td>${su.phone||''}</td><td>${su.address||''}</td><td class="actions-cell"><a href="#" class="link" data-edit="${su.id}">Edit</a><a href="#" class="link danger" data-del="${su.id}">Delete</a></td>`;
+          rows.appendChild(tr);
+        });
+      }
+
+      document.getElementById('search').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); load(e.target.value);} });
+      document.getElementById('search').addEventListener('input', (e)=>{ /* optional live filter */ });
+
+      btnNew.onclick = () => { editingId=null; form.reset(); formTitle.textContent='Add Supplier'; showForm(true); };
+      btnCancel.onclick = () => { showForm(false); };
+
+      rows.addEventListener('click', async (e)=>{
+        if(e.target.dataset.edit){
+          const su = await Store.get(e.target.dataset.edit);
+          editingId = su.id;
+          formTitle.textContent = 'Edit Supplier';
+          for(const k of ['name','email','phone','address']){ form[k].value = su[k]||''; }
+          showForm(true);
+        }
+        if(e.target.dataset.del){
+          if(confirm('Delete supplier?')){
+            try{ await Store.remove(e.target.dataset.del); load(); }catch(err){ alert(err.message||'Delete failed'); }
+          }
+        }
+      });
+
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        try{
+          if(editingId){ await Store.update(editingId, data); }
+          else{ await Store.create(data); }
+          showForm(false);
+          load();
+        }catch(err){ alert(err.message||'Save failed'); }
+      };
+
+      load();
+    </script>
+  </body>
+</html>
