@@ -1,1 +1,104 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stock Movements</title><link rel="stylesheet" href="assets/css/style.css"></head><body><header><h1>Stock Movements</h1><nav class="nav"><a class="navlink" href="index.html">Dashboard</a><a class="navlink" href="products.html">Products</a><a class="navlink" href="sales.html">Sales</a><a class="navlink active" href="stock.html">Stock</a></nav></header><div class="container"><div class="card"><form id="form"><div class="row"><input name="product_id" type="number" placeholder="Product ID" required><input name="change_amount" type="number" placeholder="Change (+/-)" required><input name="reason" placeholder="Reason (IN/OUT/ADJUSTMENT)"></div><div class="row actions"><button class="primary" type="submit">Apply</button></div></form></div><div class="card"><table><thead><tr><th>ID</th><th>Product</th><th>Change</th><th>Reason</th><th>Date</th></tr></thead><tbody id="rows"></tbody></table></div></div><script src="assets/js/api.js"></script><script>async function load(){const list=await StockAPI.list();const rows=document.getElementById('rows');rows.innerHTML='';list.forEach(m=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${m.id}</td><td>${m.product_id} • ${m.sku||''} ${m.name||''}</td><td>${m.change_amount}</td><td><span class='badge'>${m.reason}</span></td><td>${new Date(m.created_at).toLocaleString()}</td>`;rows.appendChild(tr);});}document.getElementById('form').onsubmit=async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target).entries());data.product_id=Number(data.product_id);data.change_amount=Number(data.change_amount);await StockAPI.adjust(data);e.target.reset();load();};load();</script></body></html>
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stock Movements</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+  <header>
+    <h1>Stock Movements</h1>
+
+    <nav class="nav">
+      <a class="navlink" href="index.html">Dashboard</a>
+      <a class="navlink" href="products.html">Products</a>
+      <a class="navlink" href="sales.html">Sales</a>
+      <a class="navlink active" href="stock.html">Stock</a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- Stock Adjustment Form -->
+    <div class="card">
+      <form id="form">
+
+        <div class="row">
+          <input name="product_id" type="number" placeholder="Product ID" required>
+          <input name="change_amount" type="number" placeholder="Change (+/-)" required>
+          <input name="reason" placeholder="Reason (IN/OUT/ADJUSTMENT)">
+        </div>
+
+        <div class="row actions">
+          <button class="primary" type="submit">Apply</button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Stock Movement Table -->
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Product</th>
+            <th>Change</th>
+            <th>Reason</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script src="assets/js/api.js"></script>
+
+  <script>
+    async function load() {
+      const list = await StockAPI.list();
+      const rows = document.getElementById('rows');
+
+      rows.innerHTML = '';
+
+      list.forEach(m => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${m.id}</td>
+          <td>${m.product_id} • ${m.sku || ''} ${m.name || ''}</td>
+          <td>${m.change_amount}</td>
+          <td><span class="badge">${m.reason}</span></td>
+          <td>${new Date(m.created_at).toLocaleString()}</td>
+        `;
+
+        rows.appendChild(tr);
+      });
+    }
+
+    document.getElementById('form').onsubmit = async (e) => {
+      e.preventDefault();
+
+      const data = Object.fromEntries(new FormData(e.target).entries());
+
+      data.product_id = Number(data.product_id);
+      data.change_amount = Number(data.change_amount);
+
+      await StockAPI.adjust(data);
+
+      e.target.reset();
+      load();
+    };
+
+    load();
+  </script>
+
+</body>
+</html>
