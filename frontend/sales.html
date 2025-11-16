@@ -1,2 +1,202 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sales</title><link rel="stylesheet" href="assets/css/style.css"></head><body><header><h1>Sales</h1><nav class="nav"><a class="navlink" href="dashboard.html">Dashboard</a><a class="navlink" href="products.html">Products</a><a class="navlink active" href="sales.html">Sales</a><a class="navlink" href="stock.html">Stock</a></nav></header><div class="container"><div class="card"><div class="flex"><input id="customer" placeholder="Customer name (optional)"><button class="primary" id="submit-sale">Submit Sale</button></div></div><div class="card"><div class="flex"><input id="q" placeholder="Search products"><button class="primary" id="btn-find">Find</button></div><div id="results" class="grid"></div></div><div class="card"><h3>Cart</h3><table><thead><tr><th>Product</th><th>Price</th><th>Qty</th><th>Total</th><th></th></tr></thead><tbody id="cart"></tbody></table><div class="flex right"><div class="kpi"><div class="muted">Grand Total</div><div id="grand" class="value">0.00</div></div></div></div></div><script src="assets/js/api.js"></script><script>let items=[];function renderCart(){const tbody=document.getElementById('cart');tbody.innerHTML='';let total=0;items.forEach((it,idx)=>{const tr=document.createElement('tr');const line=it.quantity*it.unit_price;total+=line;tr.innerHTML=`<td>${it.name}</td><td>${it.unit_price}</td><td><input type='number' min='1' value='${it.quantity}' data-qty='${idx}' style='width:80px'></td><td>${line.toFixed(2)}</td><td><button class='danger' data-rm='${idx}'>Remove</button></td>`;tbody.appendChild(tr);});document.getElementById('grand').textContent=total.toFixed(2);}document.getElementById('cart').addEventListener('input',(e)=>{if(e.target.dataset.qty){const i=Number(e.target.dataset.qty);items[i].quantity=Number(e.target.value)||1;renderCart();}});document.getElementById('cart').addEventListener('click',(e)=>{if(e.target.data
-set.rm){items.splice(Number(e.target.dataset.rm),1);renderCart();}});document.getElementById('btn-find').onclick=async()=>{const q=document.getElementById('q').value;const list=await ProductsAPI.list(q);const results=document.getElementById('results');results.innerHTML='';list.forEach(p=>{const div=document.createElement('div');div.className='card';div.innerHTML=`<div class='flex'><div><div>${p.name}</div><div class='muted'>${p.sku||''} • Qty: ${p.quantity}</div></div><div class='right' style='flex:1'></div><button class='primary' data-add='${p.id}'>Add</button></div>`;results.appendChild(div);});};document.getElementById('results').addEventListener('click',async(e)=>{if(e.target.dataset.add){const p=await ProductsAPI.get(e.target.dataset.add);const exist=items.find(i=>i.product_id===p.id);if(exist){exist.quantity+=1;}else{items.push({product_id:p.id,name:p.name,quantity:1,unit_price:Number(p.sell_price)});}renderCart();}});document.getElementById('submit-sale').onclick=async()=>{if(items.length===0)return alert('Cart is empty');try{const payload={customer_name:document.getElementById('customer').value||null,items:items.map(i=>({product_id:i.product_id,quantity:i.quantity,unit_price:i.unit_price}))};await SalesAPI.create(payload);items=[];renderCart();alert('Sale recorded');}catch(e){alert(e.message);} };</script></body></html>
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sales</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+  <header>
+    <h1>Sales</h1>
+
+    <nav class="nav">
+      <a class="navlink" href="dashboard.html">Dashboard</a>
+      <a class="navlink" href="products.html">Products</a>
+      <a class="navlink active" href="sales.html">Sales</a>
+      <a class="navlink" href="stock.html">Stock</a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- Customer + Submit Sale -->
+    <div class="card">
+      <div class="flex">
+        <input id="customer" placeholder="Customer name (optional)">
+        <button class="primary" id="submit-sale">Submit Sale</button>
+      </div>
+    </div>
+
+    <!-- Product Search -->
+    <div class="card">
+      <div class="flex">
+        <input id="q" placeholder="Search products">
+        <button class="primary" id="btn-find">Find</button>
+      </div>
+
+      <div id="results" class="grid"></div>
+    </div>
+
+    <!-- Cart -->
+    <div class="card">
+      <h3>Cart</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Qty</th>
+            <th>Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cart"></tbody>
+      </table>
+
+      <div class="flex right">
+        <div class="kpi">
+          <div class="muted">Grand Total</div>
+          <div id="grand" class="value">0.00</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="assets/js/api.js"></script>
+
+  <script>
+    let items = [];
+
+    function renderCart() {
+      const tbody = document.getElementById('cart');
+      tbody.innerHTML = '';
+
+      let total = 0;
+
+      items.forEach((it, idx) => {
+        const tr = document.createElement('tr');
+        const line = it.quantity * it.unit_price;
+
+        total += line;
+
+        tr.innerHTML = `
+          <td>${it.name}</td>
+          <td>${it.unit_price}</td>
+          <td>
+            <input type="number" min="1" value="${it.quantity}"
+                   data-qty="${idx}" style="width:80px">
+          </td>
+          <td>${line.toFixed(2)}</td>
+          <td>
+            <button class="danger" data-rm="${idx}">Remove</button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('grand').textContent = total.toFixed(2);
+    }
+
+    // Quantity edit
+    document.getElementById('cart').addEventListener('input', (e) => {
+      if (e.target.dataset.qty) {
+        const i = Number(e.target.dataset.qty);
+        items[i].quantity = Number(e.target.value) || 1;
+        renderCart();
+      }
+    });
+
+    // Remove item
+    document.getElementById('cart').addEventListener('click', (e) => {
+      if (e.target.dataset.rm) {
+        items.splice(Number(e.target.dataset.rm), 1);
+        renderCart();
+      }
+    });
+
+    // Find products
+    document.getElementById('btn-find').onclick = async () => {
+      const q = document.getElementById('q').value;
+      const list = await ProductsAPI.list(q);
+
+      const results = document.getElementById('results');
+      results.innerHTML = '';
+
+      list.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'card';
+
+        div.innerHTML = `
+          <div class="flex">
+            <div>
+              <div>${p.name}</div>
+              <div class="muted">${p.sku || ''} • Qty: ${p.quantity}</div>
+            </div>
+            <div class="right" style="flex:1"></div>
+            <button class="primary" data-add="${p.id}">Add</button>
+          </div>
+        `;
+
+        results.appendChild(div);
+      });
+    };
+
+    // Add to cart
+    document.getElementById('results').addEventListener('click', async (e) => {
+      if (e.target.dataset.add) {
+        const p = await ProductsAPI.get(e.target.dataset.add);
+
+        const exist = items.find(i => i.product_id === p.id);
+
+        if (exist) {
+          exist.quantity += 1;
+        } else {
+          items.push({
+            product_id: p.id,
+            name: p.name,
+            quantity: 1,
+            unit_price: Number(p.sell_price)
+          });
+        }
+
+        renderCart();
+      }
+    });
+
+    // Submit sale
+    document.getElementById('submit-sale').onclick = async () => {
+      if (items.length === 0) {
+        return alert('Cart is empty');
+      }
+
+      try {
+        const payload = {
+          customer_name: document.getElementById('customer').value || null,
+          items: items.map(i => ({
+            product_id: i.product_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price
+          }))
+        };
+
+        await SalesAPI.create(payload);
+
+        items = [];
+        renderCart();
+
+        alert('Sale recorded');
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+  </script>
+
+</body>
+</html>
